@@ -63,7 +63,79 @@ class TransactionsController < ApplicationController
 
   def create
     account = Current.family.accounts.find(params.dig(:entry, :account_id))
-    @entry = account.entries.new(entry_params)
+    requested_installments = params.dig(:entry, :installments_count).to_i
+
+    # Validate range 1..12
+    if requested_installments < 1
+      requested_installments = 1
+    end
+
+    if requested_installments > 12
+      @entry = account.entries.new(entry_params.except(:installments_count))
+      @entry.errors.add(:installments_count, I18n.t("transactions.installments_range_error", min: 1, max: 12))
+      render :new, status: :unprocessable_entity and return
+    end
+
+    installments = requested_installments
+
+    if installments > 1
+      base_params = entry_params.except(:installments_count)
+
+      # Use cents math to distribute rounding correctly
+      amount = base_params[:amount].to_d
+      sign = amount >= 0 ? 1 : -1
+      cents = (amount.abs * 100).to_i
+      quotient, remainder = cents.divmod(installments)
+
+      created_entries = []
+
+      begin
+        group_id = SecureRandom.uuid
+
+        ActiveRecord::Base.transaction do
+          installments.times do |i|
+            inst_cents = quotient + (i < remainder ? 1 : 0)
+            inst_amount = (inst_cents.to_d / 100) * sign
+
+            inst_params = base_params.deep_dup
+            base_date = inst_params[:date].is_a?(String) ? Date.parse(inst_params[:date]) : inst_params[:date]
+            inst_params[:date] = base_date + i.months
+            base_name = inst_params[:name] || ""
+            inst_params[:name] = "#{base_name} (#{i + 1}/#{installments})"
+            inst_params[:amount] = inst_amount
+
+            entry = account.entries.new(inst_params)
+            entry.save!
+            # Annotate transaction with installment metadata so they can be identified later
+            transaction_record = entry.entryable
+            if transaction_record.respond_to?(:extra)
+              tx_extra = (transaction_record.extra || {}).deep_dup
+              tx_extra["installment_group"] = group_id
+              tx_extra["installment_index"] = i + 1
+              tx_extra["installments_total"] = installments
+              transaction_record.update!(extra: tx_extra)
+            end
+
+            entry.sync_account_later
+            created_entries << entry
+          end
+        end
+
+        flash[:notice] = I18n.t("transactions.created_installments", count: installments)
+        respond_to do |format|
+          format.html { redirect_back_or_to account_path(created_entries.first.account) }
+          format.turbo_stream { stream_redirect_back_or_to(account_path(created_entries.first.account)) }
+        end
+      rescue ActiveRecord::RecordInvalid => e
+        @entry = account.entries.new(entry_params.except(:installments_count))
+        @entry.errors.add(:base, e.record.errors.full_messages.join(", "))
+        render :new, status: :unprocessable_entity
+      end
+
+      return
+    end
+
+    @entry = account.entries.new(entry_params.except(:installments_count))
 
     if @entry.save
       @entry.sync_account_later
@@ -217,7 +289,7 @@ class TransactionsController < ApplicationController
 
     def entry_params
       entry_params = params.require(:entry).permit(
-        :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
+        :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type, :installments_count,
         entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, { tag_ids: [] } ]
       )
 

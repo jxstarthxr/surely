@@ -9,6 +9,9 @@ en:
       category: Category
       category_prompt: Select a Category
       date: Date
+      installments_label: Installments
+      no_installments_label: No installments
+      installments_option: "%{count} months"
       description: Description
       description_placeholder: Describe transaction
       expense: Expense
@@ -54,6 +57,8 @@ en:
     mark_recurring: Mark as Recurring
     mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
     mark_recurring_title: Recurring Transaction
+    created_installments: "%{count} installment transactions created"
+    installments_range_error: "Installments must be between %{min} and %{max}"
     merchant_label: Merchant
     name_label: Name
     nature: Type

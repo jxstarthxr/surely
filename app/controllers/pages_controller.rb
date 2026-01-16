@@ -19,7 +19,33 @@ class PagesController < ApplicationController
 
     @dashboard_sections = build_dashboard_sections
 
+    @upcoming_expenses_series = build_upcoming_monthly_expenses_series
+
     @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
+  end
+
+  def build_upcoming_monthly_expenses_series
+    start_month = Date.current.beginning_of_month
+
+    values = (0..11).map do |i|
+      month_start = (start_month + i.months)
+      month_end = month_start.end_of_month
+
+      amount = Entry
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .joins(:account)
+        .where(accounts: { family_id: Current.family.id })
+        .where(date: month_start..month_end)
+        .where(excluded: false)
+        .where("entries.amount > 0")
+        .where.not("transactions.kind IN (?)", %w[funds_movement cc_payment loan_payment investment_contribution])
+        .sum("entries.amount")
+        .to_f
+
+      { date: month_start, value: amount }
+    end
+
+    Series.from_raw_values(values, interval: "1 month")
   end
 
   def update_preferences

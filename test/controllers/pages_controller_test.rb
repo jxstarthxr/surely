@@ -8,6 +8,10 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   test "dashboard" do
     get root_path
     assert_response :ok
+
+    # Upcoming expenses series should be available and have 12 values
+    assert assigns(:upcoming_expenses_series).present?
+    assert_equal 12, assigns(:upcoming_expenses_series).values.count
   end
 
   test "changelog" do

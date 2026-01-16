@@ -35,6 +35,83 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "allows creating a future dated transaction" do
+    future_date = Date.current + 30
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Future transaction",
+          date: future_date,
+          currency: "USD",
+          amount: 50,
+          nature: "inflow",
+          entryable_type: @entry.entryable_type
+        }
+      }
+    end
+
+    created_entry = Entry.order(:created_at).last
+    assert_equal future_date, created_entry.date
+  end
+
+  test "creates installments spread across months with proper naming and amounts" do
+    assert_difference [ "Entry.count", "Transaction.count" ], 3 do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Big Purchase",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: @entry.entryable_type,
+          installments_count: 3
+        }
+      }
+    end
+
+    created = Entry.order(:created_at).last(3)
+    assert_equal "Big Purchase (1/3)", created[0].name
+    assert_equal "Big Purchase (2/3)", created[1].name
+    assert_equal "Big Purchase (3/3)", created[2].name
+
+    # Amounts should sum to original amount
+    total = created.sum { |e| e.amount }
+    assert_equal 100, total
+
+    assert_equal Date.current, created[0].date
+    assert_equal Date.current.next_month, created[1].date
+    assert_equal Date.current.next_month(2), created[2].date
+
+    # Verify installment metadata stored on transaction.extra
+    tx0 = created[0].entryable
+    assert tx0.extra["installment_group"].present?
+    assert_equal 1, tx0.extra["installment_index"]
+    assert_equal 3, tx0.extra["installments_total"]
+  end
+
+  test "rejects out-of-range installments (> 12)" do
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "Too Many",
+          date: Date.current,
+          currency: "USD",
+          amount: 50,
+          nature: "outflow",
+          entryable_type: @entry.entryable_type,
+          installments_count: 13
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select ".errors", /Installments must be between 1 and 12/ 
+  end
+
   test "updates with transaction details" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       patch transaction_url(@entry), params: {

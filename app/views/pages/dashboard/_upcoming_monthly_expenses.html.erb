@@ -1,0 +1,28 @@
+<%# 12-month upcoming expenses bar chart (current + next 11 months) - used in dashboard header %>
+<div class="mb-6">
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-medium text-primary"><%= t("pages.dashboard.future_expenses_title") %></h3>
+        <p class="text-xs text-secondary mt-1"><%= t("pages.dashboard.upcoming_expenses_subtitle") %></p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <div
+        id="upcomingExpensesChart"
+        class="w-full flex-1 relative min-h-52"
+        data-controller="upcoming-expenses-chart"
+        data-upcoming-expenses-chart-data-value="<%= @upcoming_expenses_series.as_json[:values].to_json %>"
+        data-upcoming-expenses-chart-currency-value="<%= Current.family.currency %>">
+      </div>
+
+      <div class="mt-3 grid grid-cols-12 gap-1 text-xs text-secondary">
+        <% @upcoming_expenses_series.values.each_with_index do |v, i| %>
+          <% label = (v.date.month).to_s + "/" + (v.date.year % 100).to_s.rjust(2, '0') %>
+          <div class="text-center"><%= label %></div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

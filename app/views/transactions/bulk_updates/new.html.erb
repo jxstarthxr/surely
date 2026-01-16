@@ -6,7 +6,7 @@
       <div class="space-y-4">
         <%= render DS::Disclosure.new(title: "Overview", open: true) do %>
           <div class="pb-6 space-y-2">
-            <%= form.date_field :date, label: "Date", max: Date.current %>
+            <%= form.date_field :date, label: "Date" %>
           </div>
         <% end %>
 

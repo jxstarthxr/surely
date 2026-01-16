@@ -6,6 +6,9 @@ en:
     dashboard:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"
+      upcoming_expenses_title: "This month & next 11 months"
+      upcoming_expenses_subtitle: "Projected total expenses per month"
+      future_expenses_title: "Future expenses"
       new: "New"
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
