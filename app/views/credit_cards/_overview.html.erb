@@ -18,7 +18,7 @@
   <% end %>
 
   <%= summary_card title: t(".expiration_date") do %>
-    <%= account.credit_card.expiration_date ? l(account.credit_card.expiration_date, format: :long) : t(".unknown") %>
+    <%= account.credit_card.expiration_date ? format_date(account.credit_card.expiration_date) : t(".unknown") %>
   <% end %>
 
   <%= summary_card title: t(".annual_fee") do %>

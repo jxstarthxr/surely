@@ -35,7 +35,7 @@ class Period
       comparison_label: "vs. start of month"
     },
     "last_month" => {
-      date_range: -> { [ 1.month.ago.beginning_of_month.to_date, 1.month.ago.end_of_month.to_date ] },
+      date_range: -> { [ 1.month.ago.beginning_of_month.to_date, Date.current ] },
       label_short: "LM",
       label: "Last Month",
       comparison_label: "vs. last month"

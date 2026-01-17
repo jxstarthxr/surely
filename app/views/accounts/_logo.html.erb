@@ -1,16 +1,22 @@
 <%# locals: (account:, size: "md", color: nil) %>
 
-<% size_classes = {
-  "sm" => "w-6 h-6",
-  "md" => "w-9 h-9",
-  "lg" => "w-10 h-10",
-  "full" => "w-full h-full"
+<% size_config = {
+  "sm" => { class: "w-10 h-10", padding: "p-1", border: "border-2", scale: "1" },
+  "md" => { class: "w-12 h-12", padding: "p-1", border: "border-2", scale: "1" },
+  "lg" => { class: "w-14 h-14", padding: "p-1", border: "border-2", scale: "1" },
+  "xl" => { class: "w-16 h-16", padding: "p-1", border: "border-2", scale: "1" },
+  "full" => { class: "w-full h-full", padding: "p-1", border: "border-2", scale: "1" }
 } %>
+<% config = size_config[size] %>
 
-<% if account.logo.attached? || (account.logo_image_url.present? && (account.institution_domain.present? || account.provider&.logo_url.present?)) %>
-  <div class="shrink-0 rounded-[22%] overflow-hidden <%= size_classes[size] %>">
-    <%= image_tag account.logo_image_url, class: "w-full h-full object-contain", loading: "lazy", alt: account.name %>
+<% if account.logo.attached? %>
+  <div data-controller="adaptive-logo" class="shrink-0 rounded-[22%] overflow-hidden <%= config[:padding] %> <%= config[:border] %> <%= config[:class] %> border-gray-200" data-adaptive-logo-target="container">
+    <%= image_tag account.logo_image_url, class: "w-full h-full object-contain rounded-[18%]", loading: "eager", alt: account.name, data: { adaptive_logo_target: "image" }, style: "transform: scale(#{config[:scale]});" %>
+  </div>
+<% elsif account.provider&.logo_url.present? %>
+  <div data-controller="adaptive-logo" class="shrink-0 rounded-[22%] overflow-hidden <%= config[:padding] %> <%= config[:border] %> <%= config[:class] %> border-gray-200" data-adaptive-logo-target="container">
+    <%= image_tag account.provider.logo_url, class: "w-full h-full object-contain rounded-[18%]", loading: "eager", alt: account.name, data: { adaptive_logo_target: "image" }, style: "transform: scale(#{config[:scale]});" %>
   </div>
 <% else %>
-  <%= render DS::FilledIcon.new(variant: :text, hex_color: color || account.accountable.color, text: account.name, size: size, rounded: true) %>
+  <%= render DS::FilledIcon.new(variant: :text, hex_color: color || account.accountable.color, text: account.name, size: size, rounded: false) %>
 <% end %>

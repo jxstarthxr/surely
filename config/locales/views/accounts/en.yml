@@ -13,6 +13,10 @@ en:
     destroy:
       success: "%{type} account scheduled for deletion"
       cannot_delete_linked: "Cannot delete a linked account. Please unlink it first."
+    duplicate:
+      success: "Account duplicated successfully"
+      error: "Failed to duplicate account"
+      cannot_duplicate_linked: "Cannot duplicate a linked account"
     empty:
       empty_message: Add an account either via connection, importing or entering manually.
       new_account: New account

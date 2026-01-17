@@ -41,6 +41,11 @@ module AccountableResource
   end
 
   def update
+    # Handle logo removal if requested
+    if account_params[:remove_logo] == "1"
+      @account.logo.purge
+    end
+
     # Handle balance update if provided
     if account_params[:balance].present?
       result = @account.set_current_balance(account_params[:balance].to_d)
@@ -53,7 +58,7 @@ module AccountableResource
     end
 
     # Update remaining account attributes
-    update_params = account_params.except(:return_to, :balance, :currency)
+    update_params = account_params.except(:return_to, :balance, :currency, :remove_logo)
     unless @account.update(update_params)
       @error_message = @account.errors.full_messages.join(", ")
       render :edit, status: :unprocessable_entity
@@ -86,7 +91,7 @@ module AccountableResource
     def account_params
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
-        :institution_name, :institution_domain, :notes, :logo,
+        :institution_name, :institution_domain, :notes, :logo, :remove_logo,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end

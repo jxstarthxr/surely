@@ -31,28 +31,51 @@ class PagesController < ApplicationController
       month_start = (start_month + i.months)
       month_end = month_start.end_of_month
 
-      # Sum all positive transaction amounts (expenses) for this month
-      # Note: positive amounts = expenses, negative amounts = income (see Entry#classification)
-      amount = Current.family.entries
+      # Get all expense transactions from start of current month through next 11 months
+      # We need to start from the beginning of the month, not today, because transactions
+      # earlier in the current month might be paid later (e.g., in next month due to billing cycles)
+      entries = Current.family.entries
         .where(entryable_type: "Transaction")
-        .where(date: month_start..month_end)
+        .where(date: start_month..start_month.end_of_month + 11.months)
         .where(excluded: false)
         .where("amount > 0")
-        .sum(:amount)
-        .to_f
+        .includes(:account, :entryable)
+
+      # Calculate amount for this specific month considering billing cycles
+      amount = 0.0
+
+      entries.each do |entry|
+        transaction = entry.entryable
+        next unless transaction
+
+        # Determine the actual payment month for this transaction
+        payment_month = if entry.account&.accountable_type == "CreditCard"
+          # Load the credit card to check if billing cycle is configured
+          credit_card = entry.account.accountable
+          
+          if credit_card&.due_day.present?
+            # Calculate payment due date using the transaction method
+            payment_due_date = transaction.payment_due_date
+            payment_due_date&.beginning_of_month
+          else
+            # No billing cycle configured, use transaction date
+            entry.date.beginning_of_month
+          end
+        else
+          # For non-credit card transactions, use the transaction date
+          entry.date.beginning_of_month
+        end
+
+        # Add to this month if the payment is due in this month
+        if payment_month == month_start
+          amount += entry.amount.to_f
+        end
+      end
 
       { date: month_start, value: amount }
     end
 
     Series.from_raw_values(values, interval: "1 month")
-  end
-
-  def update_preferences
-    if Current.user.update_dashboard_preferences(preferences_params)
-      head :ok
-    else
-      head :unprocessable_entity
-    end
   end
 
   def changelog

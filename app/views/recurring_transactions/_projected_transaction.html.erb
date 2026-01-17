@@ -6,17 +6,18 @@
       <%= content_tag :div, class: ["flex items-center gap-2"] do %>
         <% if recurring_transaction.merchant.present? %>
           <% if recurring_transaction.merchant.logo_url.present? %>
-            <div class="w-6 h-6 rounded-[22%] overflow-hidden flex items-center justify-center">
+            <div data-controller="adaptive-logo" class="w-10 h-10 rounded-[22%] overflow-hidden flex items-center justify-center border-2 border-gray-200 p-1" data-adaptive-logo-target="container">
               <%= image_tag recurring_transaction.merchant.logo_url,
-                  class: "w-full h-full object-contain",
-                  loading: "lazy" %>
+                  class: "w-full h-full object-contain rounded-[18%]",
+                  loading: "lazy",
+                  data: { adaptive_logo_target: "image" } %>
             </div>
           <% else %>
             <%= render DS::FilledIcon.new(
               variant: :text,
               text: recurring_transaction.merchant.name,
               size: "sm",
-              rounded: true
+              rounded: false
             ) %>
           <% end %>
         <% else %>
@@ -24,7 +25,7 @@
             variant: :text,
             text: recurring_transaction.name,
             size: "sm",
-            rounded: true
+            rounded: false
           ) %>
         <% end %>
 

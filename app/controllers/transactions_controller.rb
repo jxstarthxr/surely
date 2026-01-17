@@ -71,6 +71,8 @@ class TransactionsController < ApplicationController
     unless [ "inflow", "outflow" ].include?(nature)
       @entry = account.entries.new(entry_params.except(:installments_count, :installment_mode))
       @entry.errors.add(:base, "Invalid transaction type")
+      @income_categories = Current.family.categories.incomes.alphabetically
+      @expense_categories = Current.family.categories.expenses.alphabetically
       render :new, status: :unprocessable_entity and return
     end
 
@@ -90,14 +92,16 @@ class TransactionsController < ApplicationController
       end
     end
 
-    # Validate range 1..12
+    # Validate range 1..1000
     if requested_installments < 1
       requested_installments = 1
     end
 
-    if requested_installments > 12
+    if requested_installments > 1000
       @entry = account.entries.new(entry_params.except(:installments_count, :installment_mode))
-      @entry.errors.add(:installments_count, I18n.t("transactions.installments_range_error", min: 1, max: 12))
+      @entry.errors.add(:installments_count, I18n.t("transactions.installments_range_error", min: 1, max: 1000))
+      @income_categories = Current.family.categories.incomes.alphabetically
+      @expense_categories = Current.family.categories.expenses.alphabetically
       render :new, status: :unprocessable_entity and return
     end
 
@@ -160,6 +164,8 @@ class TransactionsController < ApplicationController
       rescue ActiveRecord::RecordInvalid => e
         @entry = account.entries.new(entry_params.except(:installments_count, :installment_mode))
         @entry.errors.add(:base, e.record.errors.full_messages.join(", "))
+        @income_categories = Current.family.categories.incomes.alphabetically
+        @expense_categories = Current.family.categories.expenses.alphabetically
         render :new, status: :unprocessable_entity
       end
 
@@ -180,6 +186,8 @@ class TransactionsController < ApplicationController
         format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account)) }
       end
     else
+      @income_categories = Current.family.categories.incomes.alphabetically
+      @expense_categories = Current.family.categories.expenses.alphabetically
       render :new, status: :unprocessable_entity
     end
   end
@@ -321,7 +329,7 @@ class TransactionsController < ApplicationController
     def entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type, :installments_count, :installment_mode,
-        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, { tag_ids: [] } ]
+        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :deferred_to_next_cycle, { tag_ids: [] } ]
       )
 
       nature = entry_params.delete(:nature)

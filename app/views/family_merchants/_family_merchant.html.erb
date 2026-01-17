@@ -4,8 +4,8 @@
   <td class="py-3 px-4 text-sm text-primary">
     <div class="flex w-full items-center gap-2.5">
       <% if family_merchant.logo_url %>
-        <div class="w-8 h-8 rounded-[22%] overflow-hidden flex justify-center items-center">
-          <%= image_tag family_merchant.logo_url, class: "w-full h-full object-contain" %>
+        <div data-controller="adaptive-logo" class="w-8 h-8 rounded-[22%] overflow-hidden flex justify-center items-center border border-gray-200 p-0.5" data-adaptive-logo-target="container">
+          <%= image_tag family_merchant.logo_url, class: "w-full h-full object-contain rounded-[18%]", data: { adaptive_logo_target: "image" } %>
         </div>
       <% else %>
         <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: family_merchant.color } %>

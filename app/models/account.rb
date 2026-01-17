@@ -40,8 +40,8 @@ class Account < ApplicationRecord
     attachable.variant :thumb, resize_to_limit: [128, 128], preprocessed: true
   end
 
-  before_save :purge_old_logo, if: :logo_attached_changed?
-  before_save :generate_logo_from_institution_domain, if: :should_generate_logo?
+  before_save :check_if_should_generate_logo
+  after_commit :generate_logo_from_institution_domain, if: :should_fetch_logo?, on: [:create, :update]
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
@@ -293,11 +293,9 @@ class Account < ApplicationRecord
   # Get the logo URL - either from ActiveStorage attachment or provider
   def logo_image_url(variant: :thumb)
     if logo.attached?
-      if variant && logo.variable?
-        Rails.application.routes.url_helpers.rails_representation_url(logo.variant(variant), only_path: true)
-      else
-        Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
-      end
+      # Use direct service URL for favicons since they're already small (48x48)
+      # This serves directly from storage without redirect
+      Rails.application.routes.url_helpers.rails_storage_proxy_path(logo, only_path: true)
     elsif provider&.logo_url.present?
       provider.logo_url
     elsif institution_domain.present?
@@ -305,26 +303,59 @@ class Account < ApplicationRecord
     end
   end
 
-  private
+  # For liability accounts, calculate total debt including future transactions
+  # For asset accounts, returns the current balance
+  def balance_including_future
+    if liability?
+      # For liabilities, sum all transaction entries (including future ones)
+      # to show total debt obligation
+      transactions_total = entries
+        .where(entryable_type: "Transaction")
+        .where(excluded: false)
+        .sum(:amount)
 
-  def logo_attached_changed?
-    logo.attached? && logo_previously_changed?
+      # Start with opening balance (valuations) and add transaction flows
+      opening_balance = entries
+        .where(entryable_type: "Valuation")
+        .order(:date)
+        .first
+        &.amount || 0
+
+      opening_balance + transactions_total
+    else
+      # For assets, use current balance
+      balance
+    end
   end
 
-  def purge_old_logo
-    # Purge old logo if a new one is being attached
-    logo.purge_later if logo.attached? && logo_previously_changed?
+  private
+
+  def check_if_should_generate_logo
+    @should_fetch_logo = should_generate_logo?
+  end
+
+  def should_fetch_logo?
+    @should_fetch_logo == true
   end
 
   def should_generate_logo?
-    !logo.attached? && institution_domain_changed? && institution_domain.present?
+    # Auto-fetch logo when domain changes
+    # Don't replace manually uploaded logos (detected by filename pattern)
+    # Auto-fetched logos have filename like "domain_logo.png"
+    has_manual_logo = logo.attached? && logo.filename.to_s.present? && !logo.filename.to_s.end_with?("_logo.png")
+
+    result = institution_domain_changed? && institution_domain.present? && !has_manual_logo
+    Rails.logger.debug "Account#should_generate_logo? = #{result} (institution_domain_changed?: #{institution_domain_changed?}, domain: #{institution_domain.inspect}, has_manual_logo: #{has_manual_logo})"
+    result
   end
 
   def generate_logo_from_institution_domain
-    # Skip if logo is already attached or no domain provided
-    return if logo.attached? || institution_domain.blank?
+    # Skip if no domain provided
+    return if institution_domain.blank?
 
+    Rails.logger.debug "Account#generate_logo_from_institution_domain - Queueing FetchAccountLogoJob for account #{id}"
     # Fetch favicon and set as logo (done asynchronously to avoid blocking saves)
-    FetchAccountLogoJob.perform_later(self.id) if persisted?
+    # after_commit ensures the record is persisted and has an ID
+    FetchAccountLogoJob.perform_later(self.id)
   end
 end

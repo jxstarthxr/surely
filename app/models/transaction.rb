@@ -10,6 +10,7 @@ class Transaction < ApplicationRecord
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
+  after_save :recalculate_billing_cycle!, if: :should_recalculate_billing_cycle?
 
   enum :kind, {
     standard: "standard", # A regular transaction, included in budget analytics
@@ -63,6 +64,69 @@ class Transaction < ApplicationRecord
       ActiveModel::Type::Boolean.new.cast(extra_data.dig("plaid", "pending"))
   rescue
     false
+  end
+
+  # Check if transaction is deferred to next billing cycle
+  # This includes both manual deferral and automatic deferral based on cutoff date
+  def deferred_to_next_billing_cycle?
+    return false unless entry&.account&.accountable.is_a?(CreditCard)
+
+    # Manual deferral takes precedence
+    return true if deferred_to_next_cycle?
+
+    credit_card = entry.account.accountable
+    return false unless credit_card.due_day.present?
+
+    # If we have a locked billing cycle month, use that to determine if deferred
+    if billing_cycle_month.present?
+      # Transaction is deferred if payment month is in a later month than transaction month
+      # Same month = current cycle (no badge), later month = next cycle or beyond (show badge)
+      # Compare year and month only to avoid any time-of-day issues
+      transaction_year = entry.date.year
+      transaction_month = entry.date.month
+      payment_year = billing_cycle_month.year
+      payment_month = billing_cycle_month.month
+
+      # Compare: payment is deferred if it's in a later year, or same year but later month
+      return (payment_year > transaction_year) ||
+             (payment_year == transaction_year && payment_month > transaction_month)
+    end
+
+    # If billing cycle is not locked, don't show the badge for old transactions
+    # to avoid confusion when credit card settings change
+    false
+  end
+
+  # Get the actual payment due date for this transaction
+  # considering billing cycles
+  def payment_due_date
+    return entry.date unless entry&.account&.accountable.is_a?(CreditCard)
+
+    credit_card = entry.account.accountable
+    return entry.date unless credit_card.due_day.present?
+
+    # If we have a locked billing cycle month, use that
+    # This ensures changes to credit card billing settings don't affect old transactions
+    if billing_cycle_month.present?
+      return Date.new(
+        billing_cycle_month.year,
+        billing_cycle_month.month,
+        [credit_card.due_day, Date.new(billing_cycle_month.year, billing_cycle_month.month, -1).day].min
+      )
+    end
+
+    # Otherwise calculate dynamically (for backward compatibility with old transactions)
+    # Find which billing cycle this transaction belongs to
+    if deferred_to_next_cycle?
+      # Manually deferred - goes to next month's bill
+      credit_card.payment_due_date_for_month(entry.date.next_month)
+    elsif credit_card.transaction_in_next_cycle?(entry.date, entry.date)
+      # Past cutoff - automatically goes to next month
+      credit_card.payment_due_date_for_month(entry.date.next_month)
+    else
+      # Within current cycle
+      credit_card.payment_due_date_for_month(entry.date)
+    end
   end
 
   # Potential duplicate matching methods
@@ -137,7 +201,69 @@ class Transaction < ApplicationRecord
     true
   end
 
+  # Lock the billing cycle calculation for this transaction
+  # This ensures changes to credit card billing settings don't retroactively affect this transaction
+  def lock_billing_cycle!
+    return unless entry&.account&.accountable.is_a?(CreditCard)
+
+    credit_card = entry.account.accountable
+    return unless credit_card.due_day.present?
+
+    # Calculate which month this transaction's payment is due
+    payment_date = calculate_payment_due_date
+    return unless payment_date
+
+    # Store the month (not the full date) and timestamp when locked
+    update_columns(
+      billing_cycle_month: payment_date.beginning_of_month,
+      billing_cycle_locked_at: Time.current
+    )
+  end
+
+  # Recalculate and relock the billing cycle (e.g., when manual deferral changes)
+  def recalculate_billing_cycle!
+    return unless entry&.account&.accountable.is_a?(CreditCard)
+
+    credit_card = entry.account.accountable
+    return unless credit_card.due_day.present?
+
+    payment_date = calculate_payment_due_date
+    return unless payment_date
+
+    update_columns(
+      billing_cycle_month: payment_date.beginning_of_month,
+      billing_cycle_locked_at: Time.current
+    )
+  end
+
   private
+
+    # Calculate the payment due date based on current settings
+    # This is used when locking the billing cycle
+    def calculate_payment_due_date
+      return nil unless entry&.account&.accountable.is_a?(CreditCard)
+
+      credit_card = entry.account.accountable
+      return nil unless credit_card.due_day.present?
+
+      # Find which billing cycle this transaction belongs to
+      if deferred_to_next_cycle?
+        # Manually deferred - goes to next month's bill
+        credit_card.payment_due_date_for_month(entry.date.next_month)
+      elsif credit_card.transaction_in_next_cycle?(entry.date, entry.date)
+        # Past cutoff - automatically goes to next month
+        credit_card.payment_due_date_for_month(entry.date.next_month)
+      else
+        # Within current cycle
+        credit_card.payment_due_date_for_month(entry.date)
+      end
+    end
+
+    # Determine if billing cycle should be recalculated
+    # This happens when the manual deferral flag changes
+    def should_recalculate_billing_cycle?
+      saved_change_to_deferred_to_next_cycle? && !new_record?
+    end
 
     def potential_posted_match_data
       return nil unless extra.is_a?(Hash)

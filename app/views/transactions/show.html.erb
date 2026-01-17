@@ -264,6 +264,30 @@
           ) %>
         </div>
 
+        <!-- Defer to Next Billing Cycle (Credit Cards Only) -->
+        <% if @entry.account.accountable.is_a?(CreditCard) && @entry.account.accountable.due_day.present? %>
+          <div class="pb-4">
+            <%= styled_form_with model: @entry,
+                  url: transaction_path(@entry),
+                  class: "p-3",
+                  data: { controller: "auto-submit-form" } do |f| %>
+              <%= f.fields_for :entryable do |ef| %>
+                <div class="flex cursor-pointer items-center gap-4 justify-between">
+                  <div class="text-sm space-y-1">
+                    <h4 class="text-primary"><%= t(".defer_to_next_cycle_title") %></h4>
+                    <p class="text-secondary"><%= t(".defer_to_next_cycle_description") %></p>
+                  </div>
+
+                  <%= ef.toggle :deferred_to_next_cycle, {
+                        checked: @entry.transaction.deferred_to_next_billing_cycle?,
+                        data: { auto_submit_form_target: "auto" }
+                      } %>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+
         <!-- Mark as Recurring Form -->
         <div class="flex items-center justify-between gap-2 p-3">
           <div class="text-sm space-y-1">

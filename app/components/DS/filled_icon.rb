@@ -5,22 +5,32 @@ class DS::FilledIcon < DesignSystemComponent
 
   SIZES = {
     sm: {
-      container_size: "w-6 h-6",
-      container_radius: "rounded-md",
+      container_size: "w-10 h-10",
+      container_radius: "rounded-[22%]",
+      border: "border-2",
       icon_size: "sm",
       text_size: "text-xs"
     },
     md: {
-      container_size: "w-8 h-8",
-      container_radius: "rounded-lg",
+      container_size: "w-12 h-12",
+      container_radius: "rounded-[22%]",
+      border: "border-2",
       icon_size: "md",
-      text_size: "text-xs"
+      text_size: "text-sm"
     },
     lg: {
-      container_size: "w-9 h-9",
-      container_radius: "rounded-xl",
+      container_size: "w-14 h-14",
+      container_radius: "rounded-[22%]",
+      border: "border-2",
       icon_size: "lg",
-      text_size: "text-sm"
+      text_size: "text-base"
+    },
+    xl: {
+      container_size: "w-16 h-16",
+      container_radius: "rounded-[22%]",
+      border: "border-2",
+      icon_size: "xl",
+      text_size: "text-lg"
     }
   }.freeze
 
@@ -38,7 +48,8 @@ class DS::FilledIcon < DesignSystemComponent
       "flex justify-center items-center shrink-0",
       size_classes,
       radius_classes,
-      transparent? ? "border" : solid_bg_class
+      border_classes,
+      transparent? ? nil : solid_bg_class
     )
   end
 
@@ -83,6 +94,10 @@ class DS::FilledIcon < DesignSystemComponent
 
     def radius_classes
       rounded ? "rounded-full" : SIZES[size][:container_radius]
+    end
+
+    def border_classes
+      SIZES[size][:border]
     end
 
     def custom_fg_color

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_12_065106) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_17_202919) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -248,6 +248,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_12_065106) do
     t.decimal "annual_fee", precision: 10, scale: 2
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.integer "due_day", comment: "Day of month (1-31) when payment is due"
+    t.integer "cutoff_days_before_due", default: 0, comment: "Days before due date that charges roll to next month's bill"
   end
 
   create_table "cryptos", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1201,7 +1203,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_12_065106) do
     t.string "external_id"
     t.jsonb "extra", default: {}, null: false
     t.string "investment_activity_label"
+    t.boolean "deferred_to_next_cycle", default: false, comment: "Manually deferred to next billing cycle"
+    t.date "billing_cycle_month", comment: "The month when this transaction's payment is due (locked at creation)"
+    t.datetime "billing_cycle_locked_at", comment: "When the billing cycle month was calculated and locked"
+    t.index ["billing_cycle_month"], name: "index_transactions_on_billing_cycle_month"
     t.index ["category_id"], name: "index_transactions_on_category_id"
+    t.index ["deferred_to_next_cycle"], name: "index_transactions_on_deferred_to_next_cycle"
     t.index ["external_id"], name: "index_transactions_on_external_id"
     t.index ["extra"], name: "index_transactions_on_extra", using: :gin
     t.index ["investment_activity_label"], name: "index_transactions_on_investment_activity_label"
@@ -1238,7 +1245,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_12_065106) do
     t.boolean "otp_required", default: false, null: false
     t.string "otp_backup_codes", default: [], array: true
     t.boolean "show_sidebar", default: true
-    t.string "default_period", default: "last_30_days", null: false
+    t.string "default_period", default: "last_month", null: false
     t.uuid "last_viewed_chat_id"
     t.boolean "show_ai_sidebar", default: true
     t.boolean "ai_enabled", default: false, null: false

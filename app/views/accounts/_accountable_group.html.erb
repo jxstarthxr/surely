@@ -33,13 +33,18 @@
 
           <div class="min-w-0 grow">
             <div class="flex items-center gap-2 mb-0.5">
-              <%= tag.p account.name, class: class_names("text-sm text-primary font-medium truncate", "animate-pulse" => account.syncing?) %>
+              <%= tag.p class: class_names("text-sm text-primary font-medium truncate", "animate-pulse" => account.syncing?) do %>
+                <%= account.name %>
+                <% if account.institution_name %>
+                  <span class="text-secondary">• <%= account.institution_name %></span>
+                <% end %>
+              <% end %>
             </div>
             <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
           </div>
 
           <div class="ml-auto text-right grow h-10">
-            <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap" %>
+            <%= tag.p format_money(Money.new(account.converted_balance, account_group.currency)), class: "text-sm font-medium text-primary whitespace-nowrap" %>
             <%= turbo_frame_tag dom_id(account, :sparkline), src: sparkline_account_path(account), loading: "lazy", data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
               <div class="flex items-center w-8 h-4 ml-auto">
                 <div class="w-6 h-px bg-loader"></div>

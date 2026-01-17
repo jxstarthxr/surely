@@ -10,6 +10,8 @@ class Entry < ApplicationRecord
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
 
+  after_commit :lock_transaction_billing_cycle, on: :create, if: -> { transaction? && entryable.present? }
+
   validates :date, :name, :amount, :currency, presence: true
   validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
@@ -279,4 +281,32 @@ class Entry < ApplicationRecord
       all.size
     end
   end
+
+  private
+
+    # Lock the billing cycle for credit card transactions
+    def lock_transaction_billing_cycle
+      return unless entryable.is_a?(Transaction)
+      return unless account&.accountable.is_a?(CreditCard)
+
+      credit_card = account.accountable
+      return unless credit_card.due_day.present?
+
+      # Calculate payment date based on current settings
+      payment_date = if entryable.deferred_to_next_cycle?
+        credit_card.payment_due_date_for_month(date.next_month)
+      elsif credit_card.transaction_in_next_cycle?(date, date)
+        credit_card.payment_due_date_for_month(date.next_month)
+      else
+        credit_card.payment_due_date_for_month(date)
+      end
+
+      return unless payment_date
+
+      # Lock the billing cycle month on the transaction
+      entryable.update_columns(
+        billing_cycle_month: payment_date.beginning_of_month,
+        billing_cycle_locked_at: Time.current
+      )
+    end
 end

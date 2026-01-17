@@ -29,9 +29,24 @@ class BalanceSheet::AccountTotals
 
     def account_rows
       @account_rows ||= query.map do |account_row|
+        # Use balance_including_future for liabilities to show total debt obligation
+        balance_to_use = account_row.liability? ? account_row.balance_including_future : account_row.balance
+
+        # Convert to family currency if needed
+        converted = if account_row.currency == family.currency
+          balance_to_use
+        else
+          rate = ExchangeRate.find_rate(
+            from: account_row.currency,
+            to: family.currency,
+            date: Date.current
+          )
+          balance_to_use * (rate || 1)
+        end
+
         AccountRow.new(
           account: account_row,
-          converted_balance: account_row.converted_balance,
+          converted_balance: converted,
           is_syncing: sync_status_monitor.account_syncing?(account_row)
         )
       end
@@ -46,18 +61,7 @@ class BalanceSheet::AccountTotals
 
     def query
       @query ||= Rails.cache.fetch(cache_key) do
-        visible_accounts
-          .joins(ActiveRecord::Base.sanitize_sql_array([
-            "LEFT JOIN exchange_rates ON exchange_rates.date = ? AND accounts.currency = exchange_rates.from_currency AND exchange_rates.to_currency = ?",
-            Date.current,
-            family.currency
-          ]))
-          .select(
-            "accounts.*",
-            "SUM(accounts.balance * COALESCE(exchange_rates.rate, 1)) as converted_balance"
-          )
-          .group(:classification, :accountable_type, :id)
-          .to_a
+        visible_accounts.to_a
       end
     end
 end

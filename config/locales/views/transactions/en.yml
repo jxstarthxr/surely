@@ -18,6 +18,8 @@ en:
       description_placeholder: Describe transaction
       expense: Expense
       income: Income
+      merchant_label: Merchant
+      merchant_none: (none)
       none: (none)
       note_label: Notes
       note_placeholder: Enter a note
@@ -42,6 +44,8 @@ en:
       activity_type_description: Type of investment activity (Buy, Sell, Dividend, etc.). Auto-detected or set manually.
       one_time_title: One-time %{type}
       one_time_description: One-time transactions will be excluded from certain budgeting calculations and reports to help you see what's really important.
+      defer_to_next_cycle_title: Defer to next billing cycle
+      defer_to_next_cycle_description: Manually defer this charge to next month's credit card bill
     activity_labels:
       buy: Buy
       sell: Sell
@@ -78,6 +82,8 @@ en:
     transaction:
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
+      next_month_bill: Next month
+      deferred_tooltip: This charge will be included in next month's credit card bill
       activity_type_tooltip: Investment activity type
       possible_duplicate: Duplicate?
       potential_duplicate_tooltip: This may be a duplicate of another transaction

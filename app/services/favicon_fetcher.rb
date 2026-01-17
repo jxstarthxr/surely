@@ -30,11 +30,11 @@ class FaviconFetcher
     return false if favicon_url.blank?
 
     begin
-      # Download the favicon
+      # Download the favicon (with redirect following)
       uri = URI.parse(favicon_url)
-      response = Net::HTTP.get_response(uri)
+      response = fetch_with_redirect(uri)
 
-      return false unless response.is_a?(Net::HTTPSuccess)
+      return false unless response && response.is_a?(Net::HTTPSuccess)
 
       # Attach to the model
       filename = "#{extract_domain(url_or_domain)}_logo.png"
@@ -52,6 +52,36 @@ class FaviconFetcher
   end
 
   private
+
+  # Fetch URL with redirect following (max 5 redirects)
+  # @param uri [URI] URI to fetch
+  # @param limit [Integer] Max redirects to follow
+  # @return [Net::HTTPResponse, nil]
+  def self.fetch_with_redirect(uri, limit = 5)
+    return nil if limit.zero?
+
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = (uri.scheme == "https")
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE if Rails.env.development?
+
+    request = Net::HTTP::Get.new(uri.request_uri)
+    response = http.request(request)
+
+    case response
+    when Net::HTTPSuccess
+      response
+    when Net::HTTPRedirection
+      new_uri = URI.parse(response["location"])
+      # Handle relative redirects
+      new_uri = URI.join(uri, response["location"]) if new_uri.relative?
+      fetch_with_redirect(new_uri, limit - 1)
+    else
+      nil
+    end
+  rescue StandardError => e
+    Rails.logger.error("HTTP request failed: #{e.message}")
+    nil
+  end
 
   # Extract domain from URL or return as-is if already a domain
   # @param url_or_domain [String]

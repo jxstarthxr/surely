@@ -4,15 +4,15 @@
   <div class="grid grid-cols-12 items-center text-primary text-sm font-medium p-4">
     <div class="col-span-4 flex items-center gap-4">
       <% if holding.security.brandfetch_icon_url.present? %>
-        <div class="w-9 h-9 rounded-[22%] overflow-hidden flex items-center justify-center">
+        <div class="w-12 h-12 rounded-[22%] overflow-hidden flex items-center justify-center border-2 border-gray-200 p-1">
           <%= image_tag holding.security.brandfetch_icon_url, class: "w-full h-full object-contain", loading: "lazy" %>
         </div>
       <% elsif holding.security.logo_url.present? %>
-        <div class="w-9 h-9 rounded-[22%] overflow-hidden flex items-center justify-center">
+        <div class="w-12 h-12 rounded-[22%] overflow-hidden flex items-center justify-center border-2 border-gray-200 p-1">
           <%= image_tag holding.security.logo_url, class: "w-full h-full object-contain", loading: "lazy" %>
         </div>
       <% else %>
-        <%= render DS::FilledIcon.new(variant: :text, text: holding.name, size: "md", rounded: true) %>
+        <%= render DS::FilledIcon.new(variant: :text, text: holding.name, size: "md", rounded: false) %>
       <% end %>
       <div class="space-y-0.5">
         <%= link_to holding.name, holding_path(holding), data: { turbo_frame: :drawer }, class: "hover:underline" %>

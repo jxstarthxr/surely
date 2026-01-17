@@ -19,39 +19,43 @@
 
         <div class="max-w-full">
           <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
-            <div class="hidden lg:flex">
+            <%# Logo - Desktop %>
+            <div class="hidden lg:flex shrink-0">
               <% if transaction.merchant&.logo_url.present? %>
-                <div class="w-9 h-9 rounded-[22%] overflow-hidden flex items-center justify-center">
+                <div data-controller="adaptive-logo" class="w-14 h-14 rounded-[22%] overflow-hidden flex items-center justify-center border-2 border-gray-200 p-1" data-adaptive-logo-target="container">
                   <%= image_tag transaction.merchant.logo_url,
-                      class: "w-full h-full object-contain",
-                      loading: "lazy" %>
+                      class: "w-full h-full object-contain rounded-[18%]",
+                      loading: "lazy",
+                      data: { adaptive_logo_target: "image" } %>
                 </div>
               <% else %>
-                <div class="hidden lg:flex">
-                  <%= render DS::FilledIcon.new(
-                    variant: :text,
-                    text: entry.name,
-                    size: "lg",
-                    rounded: true
-                  ) %>
-                </div>
+                <%= render DS::FilledIcon.new(
+                  variant: :text,
+                  text: entry.name,
+                  size: "lg",
+                  rounded: false
+                ) %>
               <% end %>
             </div>
-            <div class="flex md:hidden items-center gap-1 col-span-2 relative">
+
+            <%# Logo - Mobile with category icon %>
+            <div class="flex md:hidden items-center gap-1 col-span-2 relative shrink-0">
               <%= render "transactions/transaction_category", transaction: transaction, variant: "mobile" %>
               <% if transaction.merchant&.logo_url.present? %>
-                <div class="w-5 h-5 rounded-[22%] overflow-hidden absolute -bottom-1 -right-1 pointer-events-none">
+                <div data-controller="adaptive-logo" class="w-5 h-5 rounded-[22%] overflow-hidden absolute -bottom-1 -right-1 pointer-events-none border border-gray-200" data-adaptive-logo-target="container">
                   <%= image_tag transaction.merchant.logo_url,
-                      class: "w-full h-full object-contain",
-                      loading: "lazy" %>
+                      class: "w-full h-full object-contain bg-white rounded-[18%]",
+                      loading: "lazy",
+                      data: { adaptive_logo_target: "image" } %>
                 </div>
               <% end %>
             </div>
 
-            <div class="truncate">
+            <div class="min-w-0 flex-1">
               <div class="space-y-0.5">
-                <div class="flex items-center gap-1 min-w-0">
-                  <div class="truncate flex-shrink">
+                <%# Name and badges on same line %>
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <div class="truncate flex-shrink min-w-0">
                     <% if transaction.transfer? %>
                       <%= link_to(
                             entry.name,
@@ -75,17 +79,10 @@
                     <% end %>
                   </div>
 
-                  <div class="flex items-center gap-1 flex-shrink-0">
+                  <div class="flex items-center gap-1 flex-shrink-0 flex-wrap">
                     <% if transaction.one_time? %>
                       <span class="text-orange-500" title="One-time <%= entry.amount.negative? ? "income" : "expense" %> (excluded from averages)">
                         <%= icon "asterisk", size: "sm", color: "current" %>
-                      </span>
-                    <% end %>
-
-                    <%# Investment activity label badge %>
-                    <% if transaction.investment_activity_label.present? %>
-                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-alpha-black-50 text-secondary" title="<%= t("transactions.transaction.activity_type_tooltip") %>">
-                        <%= t("transactions.activity_labels.#{transaction.investment_activity_label.parameterize(separator: '_')}") %>
                       </span>
                     <% end %>
 
@@ -94,6 +91,13 @@
                       <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-1.5 py-0.5 border border-secondary text-secondary" title="<%= t("transactions.transaction.pending_tooltip") %>">
                         <%= icon "clock", size: "sm", color: "current" %>
                         <%= t("transactions.transaction.pending") %>
+                      </span>
+                    <% end %>
+
+                    <%# Investment activity label badge %>
+                    <% if transaction.investment_activity_label.present? %>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-alpha-black-50 text-secondary" title="<%= t("transactions.transaction.activity_type_tooltip") %>">
+                        <%= t("transactions.activity_labels.#{transaction.investment_activity_label.parameterize(separator: '_')}") %>
                       </span>
                     <% end %>
 
@@ -118,6 +122,7 @@
                   </div>
                 </div>
 
+                <%# Secondary line with date, merchant, account info %>
                 <div class="text-secondary text-xs font-normal">
                   <% if transaction.transfer? %>
                     <span class="text-secondary">
@@ -147,8 +152,16 @@
         </div>
       </div>
 
-      <div class="hidden md:flex items-center gap-1 col-span-2">
+      <div class="hidden md:flex flex-col items-center gap-1 col-span-2">
         <%= render "transactions/transaction_category", transaction: transaction, variant: "desktop" %>
+
+        <%# Deferred to next billing cycle indicator - shows month name %>
+        <% if transaction.deferred_to_next_billing_cycle? %>
+          <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 border border-yellow-500 bg-yellow-500/10 text-yellow-600" title="<%= t("transactions.transaction.deferred_tooltip") %>">
+            <%= icon "calendar-clock", size: "sm", color: "current" %>
+            <%= transaction.payment_due_date.strftime('%B') %>
+          </span>
+        <% end %>
       </div>
 
       <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto text-right">

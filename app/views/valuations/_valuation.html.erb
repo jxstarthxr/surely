@@ -13,8 +13,8 @@
                         class: "checkbox checkbox--light hidden lg:block",
                         data: { id: entry.id, "bulk-select-target": "row", action: "bulk-select#toggleRowSelection", checkbox_toggle_target: "selectionEntry" } %>
 
-        <div class="flex items-center gap-3">
-          <%= render DS::FilledIcon.new(icon: icon, size: "md", hex_color: color, rounded: true) %>
+        <div class="flex items-center gap-3 lg:gap-4">
+          <%= render DS::FilledIcon.new(icon: icon, size: "lg", hex_color: color, rounded: false) %>
 
           <div class="truncate text-primary">
             <%= link_to entry.name,

@@ -7,15 +7,15 @@
       </div>
 
       <% if @holding.security.brandfetch_icon_url.present? %>
-        <div class="w-9 h-9 rounded-[22%] overflow-hidden flex items-center justify-center">
-          <%= image_tag @holding.security.brandfetch_icon_url, loading: "lazy", class: "w-full h-full object-contain" %>
+        <div class="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center border-2 p-1" style="border-color: rgba(255,255,255,0.2);">
+          <%= image_tag @holding.security.brandfetch_icon_url, loading: "lazy", class: "w-full h-full object-contain rounded-md" %>
         </div>
       <% elsif @holding.security.logo_url.present? %>
-        <div class="w-9 h-9 rounded-[22%] overflow-hidden flex items-center justify-center">
-          <%= image_tag @holding.security.logo_url, loading: "lazy", class: "w-full h-full object-contain" %>
+        <div class="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center border-2 p-1" style="border-color: rgba(255,255,255,0.2);">
+          <%= image_tag @holding.security.logo_url, loading: "lazy", class: "w-full h-full object-contain rounded-md" %>
         </div>
       <% else %>
-        <%= render DS::FilledIcon.new(variant: :text, text: @holding.name, size: "md", rounded: true) %>
+        <%= render DS::FilledIcon.new(variant: :text, text: @holding.name, size: "md", rounded: false) %>
       <% end %>
     </div>
   <% end %>

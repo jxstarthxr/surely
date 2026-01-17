@@ -41,6 +41,7 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def update
+    Rails.logger.debug "FamilyMerchantsController#update - params: #{merchant_params.inspect}"
     if @merchant.is_a?(ProviderMerchant)
       # Convert ProviderMerchant to FamilyMerchant for this family only
       @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, merchant_params)
@@ -49,6 +50,7 @@ class FamilyMerchantsController < ApplicationController
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
       end
     elsif @merchant.update(merchant_params)
+      Rails.logger.debug "FamilyMerchantsController#update - merchant saved successfully, logo_url: #{@merchant.logo_url.inspect}"
       respond_to do |format|
         format.html { redirect_to family_merchants_path, notice: t(".success") }
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
@@ -116,7 +118,7 @@ class FamilyMerchantsController < ApplicationController
     def merchant_params
       # Handle both family_merchant and provider_merchant param keys
       key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
-      params.require(key).permit(:name, :color, :website_url, :logo)
+      params.require(key).permit(:name, :color, :website_url, :logo, :logo_url)
     end
 
     def all_family_merchants

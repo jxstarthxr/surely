@@ -4,29 +4,33 @@
   <%= render DS::Alert.new(message: @error_message, variant: :error) %>
 <% end %>
 
-<div data-controller="favicon-preview">
+<div data-controller="favicon-preview account-form">
 <%= styled_form_with model: account, url: url, scope: :account, data: { turbo: false }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
   <div class="grow space-y-2">
     <%= form.hidden_field :accountable_type %>
     <%= form.hidden_field :return_to, value: params[:return_to] %>
 
     <div class="flex flex-col items-center mb-4">
-      <% if account.logo.attached? %>
-        <div class="w-20 h-20 rounded-[22%] overflow-hidden flex items-center justify-center mb-3">
-          <%= image_tag account.logo_image_url, class: "w-full h-full object-contain", alt: account.name %>
-        </div>
-      <% elsif account.logo_image_url.present? && (account.institution_domain.present? || account.provider&.logo_url.present?) %>
-        <div class="w-20 h-20 rounded-[22%] overflow-hidden flex items-center justify-center mb-3">
-          <img data-favicon-preview-target="preview" src="<%= account.logo_image_url %>" class="w-full h-full object-contain" alt="<%= account.name %>" />
-        </div>
-      <% else %>
-        <div class="w-20 h-20 flex items-center justify-center relative mb-3">
-          <img data-favicon-preview-target="preview" class="w-20 h-20 rounded-[22%] overflow-hidden object-contain opacity-0 absolute inset-0" alt="Logo preview" />
-          <div data-favicon-preview-target="placeholder" class="flex items-center justify-center w-20 h-20 rounded-full" style="background-color: <%= account.accountable.color %>">
-            <span class="text-3xl font-bold text-white"><%= account.name&.first&.upcase || '?' %></span>
+      <div class="flex items-center justify-center relative mb-3">
+        <% if account.logo.attached? %>
+          <div data-favicon-preview-target="existingLogo">
+            <%= render "accounts/logo", account: account, size: "xl" %>
           </div>
-        </div>
-      <% end %>
+          <div data-favicon-preview-target="placeholder" data-account-form-target="logoPlaceholder" class="flex items-center justify-center w-16 h-16 rounded-xl border-2 hidden" style="background-color: color-mix(in oklab, <%= account.accountable.color %> 10%, transparent); border-color: color-mix(in oklab, <%= account.accountable.color %> 10%, transparent); color: <%= account.accountable.color %>">
+            <span class="text-xl font-medium uppercase"><%= account.name&.first&.upcase || '?' %></span>
+          </div>
+        <% else %>
+          <% has_logo = account.provider&.logo_url.present? %>
+          <div class="relative w-16 h-16">
+            <div data-controller="adaptive-logo" data-adaptive-logo-target="container" class="w-16 h-16 rounded-xl overflow-hidden p-1 border-2 <%= 'opacity-0' unless has_logo %> absolute inset-0 flex items-center justify-center" style="background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.02) 100%); border-color: rgba(255,255,255,0.2);">
+              <img data-favicon-preview-target="preview" data-adaptive-logo-target="image" src="<%= has_logo ? account.provider.logo_url : '' %>" class="w-full h-full object-contain rounded-md" alt="Logo preview" style="transform: scale(1);" />
+            </div>
+            <div data-favicon-preview-target="placeholder" data-account-form-target="logoPlaceholder" class="flex items-center justify-center w-16 h-16 rounded-xl border-2 <%= 'hidden' if has_logo %>" style="background-color: color-mix(in oklab, <%= account.accountable.color %> 10%, transparent); border-color: color-mix(in oklab, <%= account.accountable.color %> 10%, transparent); color: <%= account.accountable.color %>">
+              <span class="text-xl font-medium uppercase"><%= account.name&.first&.upcase || '?' %></span>
+            </div>
+          </div>
+        <% end %>
+      </div>
 
       <div class="flex gap-2">
         <%= form.file_field :logo, accept: "image/*", class: "hidden", id: "account_logo_upload" %>
@@ -34,7 +38,7 @@
           <%= account.logo.attached? ? t(".change_logo") : t(".upload_logo") %>
         </label>
         <% if account.logo.attached? %>
-          <%= button_tag type: "button", class: "px-3 py-1.5 text-sm bg-surface border border-primary rounded-lg hover:bg-surface-hover text-secondary", data: { action: "click->account-form#removeLogo" } do %>
+          <%= button_tag type: "button", class: "px-3 py-1.5 text-sm bg-surface border border-primary rounded-lg hover:bg-surface-hover text-secondary", data: { action: "click->account-form#removeLogo", account_form_target: "removeButton" } do %>
             <%= t(".remove_logo") %>
           <% end %>
         <% end %>

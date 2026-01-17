@@ -1,5 +1,5 @@
 class AccountsController < ApplicationController
-  before_action :set_account, only: %i[sync sparkline toggle_active show destroy unlink confirm_unlink select_provider]
+  before_action :set_account, only: %i[sync sparkline toggle_active show destroy unlink confirm_unlink select_provider duplicate]
   include Periodable
 
   def index
@@ -162,6 +162,42 @@ class AccountsController < ApplicationController
 
     if @available_providers.empty?
       redirect_to account_path(@account), alert: t("accounts.select_provider.no_providers")
+    end
+  end
+
+  def duplicate
+    if @account.linked?
+      redirect_to account_path(@account), alert: t("accounts.duplicate.cannot_duplicate_linked")
+      return
+    end
+
+    # Create duplicate with "Duplicate" prefix
+    duplicate_account = @account.dup
+    duplicate_account.name = "Duplicate #{@account.name}"
+    duplicate_account.notes = @account.notes
+    duplicate_account.institution_name = @account.institution_name
+    duplicate_account.institution_domain = @account.institution_domain
+
+    # Duplicate the accountable (e.g., Depository, CreditCard, etc.)
+    if @account.accountable.present?
+      duplicate_accountable = @account.accountable.dup
+      duplicate_account.accountable = duplicate_accountable
+    end
+
+    # Attach the same logo if present
+    if @account.logo.attached?
+      duplicate_account.logo.attach(@account.logo.blob)
+    end
+
+    # Set initial balance to match current balance
+    duplicate_account.balance = @account.balance
+
+    if duplicate_account.save
+      # Create initial balance entry
+      duplicate_account.sync_later
+      redirect_to account_path(duplicate_account), notice: t("accounts.duplicate.success")
+    else
+      redirect_to account_path(@account), alert: t("accounts.duplicate.error")
     end
   end
 

@@ -13,6 +13,13 @@ en:
       expiration_date: Expiration date
       minimum_payment: Minimum payment
       minimum_payment_placeholder: '100'
+      billing_cycle: Billing Cycle
+      due_day: Payment due day
+      due_day_placeholder: '15'
+      due_day_hint: Day of month (1-31) when payment is due
+      cutoff_days_before_due: Cutoff days before due
+      cutoff_days_before_due_placeholder: '0'
+      cutoff_days_before_due_hint: Days before due date that new charges roll to next month's bill
     new:
       title: Enter credit card details
     overview:

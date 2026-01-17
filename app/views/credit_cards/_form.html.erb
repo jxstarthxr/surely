@@ -33,6 +33,25 @@
                                         placeholder: t("credit_cards.form.annual_fee_placeholder"),
                                         min: 0 %>
       </div>
+
+      <%= render "shared/ruler", classes: "my-4" %>
+
+      <h3 class="text-sm font-medium text-primary mb-2"><%= t("credit_cards.form.billing_cycle") %></h3>
+
+      <div class="flex items-center gap-2">
+        <%= credit_card_form.number_field :due_day,
+                                        label: t("credit_cards.form.due_day"),
+                                        placeholder: t("credit_cards.form.due_day_placeholder"),
+                                        hint: t("credit_cards.form.due_day_hint"),
+                                        min: 1,
+                                        max: 31 %>
+
+        <%= credit_card_form.number_field :cutoff_days_before_due,
+                                        label: t("credit_cards.form.cutoff_days_before_due"),
+                                        placeholder: t("credit_cards.form.cutoff_days_before_due_placeholder"),
+                                        hint: t("credit_cards.form.cutoff_days_before_due_hint"),
+                                        min: 0 %>
+      </div>
     <% end %>
   </div>
 <% end %>
