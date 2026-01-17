@@ -26,6 +26,12 @@ en:
       institution_name_placeholder: e.g., Chase Bank
       institution_domain_label: Institution domain
       institution_domain_placeholder: e.g., chase.com
+      institution_domain_hint: Enter the institution's website domain to automatically fetch their logo
+      upload_logo: Upload logo
+      change_logo: Change logo
+      remove_logo: Remove logo
+      logo_hint: Or enter the institution domain below to auto-fetch
+      logo_fetch_failed: Could not fetch logo from domain
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
     index:

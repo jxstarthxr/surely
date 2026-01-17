@@ -1,14 +1,44 @@
 <%# locals: (family_merchant:) %>
 
-<div data-controller="color-avatar">
+<div data-controller="color-avatar favicon-preview">
   <%= styled_form_with model: family_merchant, url: family_merchant.persisted? ? family_merchant_path(family_merchant) : family_merchants_path, class: "space-y-4" do |f| %>
     <section class="space-y-4">
       <% if family_merchant.errors.any? %>
         <%= render "shared/form_errors", model: family_merchant %>
       <% end %>
 
-      <div class="w-fit m-auto mb-4">
-        <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: family_merchant.color } %>
+      <div class="w-fit m-auto mb-4 relative">
+        <% if family_merchant.logo.attached? %>
+          <div class="w-20 h-20 rounded-[22%] overflow-hidden flex items-center justify-center mx-auto mb-2">
+            <%= image_tag family_merchant.logo_image_url, class: "w-full h-full object-contain", alt: family_merchant.name %>
+          </div>
+        <% elsif family_merchant.logo_url.present? %>
+          <div class="w-20 h-20 rounded-[22%] overflow-hidden flex items-center justify-center mx-auto mb-2">
+            <img data-favicon-preview-target="preview" src="<%= family_merchant.logo_url %>" class="w-full h-full object-contain" alt="<%= family_merchant.name %>" />
+          </div>
+        <% else %>
+          <div class="w-20 h-20 flex items-center justify-center mx-auto mb-2 relative">
+            <img data-favicon-preview-target="preview" class="w-20 h-20 rounded-[22%] overflow-hidden object-contain opacity-0 absolute inset-0" alt="Logo preview" />
+            <div data-favicon-preview-target="placeholder" class="flex items-center justify-center w-20 h-20 rounded-full" style="background-color: <%= family_merchant.color %>">
+              <span class="text-3xl font-bold text-white"><%= family_merchant.name&.first&.upcase || '?' %></span>
+            </div>
+          </div>
+        <% end %>
+        <div data-favicon-preview-target="warning" class="hidden mt-2 flex items-center justify-center gap-1 text-xs text-warning">
+          <%= icon "alert-triangle", size: "sm" %>
+          <span><%= t(".logo_fetch_failed") %></span>
+        </div>
+      </div>
+      <div class="flex gap-2 items-center justify-center mb-4">
+        <%= f.file_field :logo, accept: "image/*", class: "hidden", id: "merchant_logo_upload", data: { action: "change->color-avatar#previewLogo" } %>
+        <label for="merchant_logo_upload" class="cursor-pointer px-3 py-1.5 text-sm bg-surface border border-primary rounded-lg hover:bg-surface-hover text-primary">
+          <%= t(".upload_logo") %>
+        </label>
+        <% if family_merchant.logo.attached? %>
+          <%= button_tag type: "button", class: "px-3 py-1.5 text-sm bg-surface border border-primary rounded-lg hover:bg-surface-hover text-secondary", data: { action: "click->color-avatar#removeLogo" } do %>
+            <%= t(".remove_logo") %>
+          <% end %>
+        <% end %>
       </div>
       <div class="flex gap-2 items-center justify-center">
         <% FamilyMerchant::COLORS.each do |color| %>
@@ -23,7 +53,7 @@
       </div>
       <% if family_merchant.is_a?(FamilyMerchant) %>
         <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
-          <%= f.text_field :website_url, placeholder: t(".website_placeholder") %>
+          <%= f.text_field :website_url, placeholder: t(".website_placeholder"), data: { favicon_preview_target: "input", action: "input->favicon-preview#handleInput" } %>
         </div>
         <p class="text-xs text-subdued"><%= t(".website_hint") %></p>
       <% end %>

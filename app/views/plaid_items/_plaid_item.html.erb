@@ -6,9 +6,9 @@
       <div class="flex items-center gap-2">
         <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
 
-        <div class="flex items-center justify-center h-8 w-8 bg-blue-600/10 rounded-full">
+        <div class="flex items-center justify-center h-8 w-8 bg-blue-600/10 rounded-[22%] overflow-hidden">
           <% if plaid_item.logo.attached? %>
-            <%= image_tag plaid_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
+            <%= image_tag plaid_item.logo, class: "h-full w-full object-contain", loading: "lazy" %>
           <% else %>
             <div class="flex items-center justify-center">
               <%= tag.p plaid_item.name.first.upcase, class: "text-blue-600 text-xs font-medium" %>

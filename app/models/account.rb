@@ -36,7 +36,12 @@ class Account < ApplicationRecord
     manual.where.not(status: :pending_deletion)
   }
 
-  has_one_attached :logo
+  has_one_attached :logo do |attachable|
+    attachable.variant :thumb, resize_to_limit: [128, 128], preprocessed: true
+  end
+
+  before_save :purge_old_logo, if: :logo_attached_changed?
+  before_save :generate_logo_from_institution_domain, if: :should_generate_logo?
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
@@ -283,5 +288,43 @@ class Account < ApplicationRecord
     else
       raise "Unknown account type: #{accountable_type}"
     end
+  end
+
+  # Get the logo URL - either from ActiveStorage attachment or provider
+  def logo_image_url(variant: :thumb)
+    if logo.attached?
+      if variant && logo.variable?
+        Rails.application.routes.url_helpers.rails_representation_url(logo.variant(variant), only_path: true)
+      else
+        Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+      end
+    elsif provider&.logo_url.present?
+      provider.logo_url
+    elsif institution_domain.present?
+      FaviconFetcher.fetch_url(institution_domain, size: 128)
+    end
+  end
+
+  private
+
+  def logo_attached_changed?
+    logo.attached? && logo_previously_changed?
+  end
+
+  def purge_old_logo
+    # Purge old logo if a new one is being attached
+    logo.purge_later if logo.attached? && logo_previously_changed?
+  end
+
+  def should_generate_logo?
+    !logo.attached? && institution_domain_changed? && institution_domain.present?
+  end
+
+  def generate_logo_from_institution_domain
+    # Skip if logo is already attached or no domain provided
+    return if logo.attached? || institution_domain.blank?
+
+    # Fetch favicon and set as logo (done asynchronously to avoid blocking saves)
+    FetchAccountLogoJob.perform_later(self.id) if persisted?
   end
 end

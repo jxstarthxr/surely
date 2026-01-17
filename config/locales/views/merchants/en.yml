@@ -13,6 +13,9 @@ en:
       name_placeholder: Merchant name
       website_placeholder: Website (e.g., starbucks.com)
       website_hint: Enter the merchant's website to automatically display their logo
+      upload_logo: Upload custom logo
+      remove_logo: Remove logo
+      logo_fetch_failed: Could not fetch logo from website
     index:
       empty: No merchants yet
       new: New merchant

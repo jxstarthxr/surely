@@ -21,9 +21,11 @@
           <%= content_tag :div, class: ["flex items-center gap-3 lg:gap-4"] do %>
             <div class="hidden lg:flex">
               <% if transaction.merchant&.logo_url.present? %>
-                <%= image_tag transaction.merchant.logo_url,
-                    class: "w-9 h-9 rounded-full",
-                    loading: "lazy" %>
+                <div class="w-9 h-9 rounded-[22%] overflow-hidden flex items-center justify-center">
+                  <%= image_tag transaction.merchant.logo_url,
+                      class: "w-full h-full object-contain",
+                      loading: "lazy" %>
+                </div>
               <% else %>
                 <div class="hidden lg:flex">
                   <%= render DS::FilledIcon.new(
@@ -38,9 +40,11 @@
             <div class="flex md:hidden items-center gap-1 col-span-2 relative">
               <%= render "transactions/transaction_category", transaction: transaction, variant: "mobile" %>
               <% if transaction.merchant&.logo_url.present? %>
-                <%= image_tag transaction.merchant.logo_url,
-                    class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
-                    loading: "lazy" %>
+                <div class="w-5 h-5 rounded-[22%] overflow-hidden absolute -bottom-1 -right-1 pointer-events-none">
+                  <%= image_tag transaction.merchant.logo_url,
+                      class: "w-full h-full object-contain",
+                      loading: "lazy" %>
+                </div>
               <% end %>
             </div>
 

@@ -6,9 +6,11 @@
       <%= content_tag :div, class: ["flex items-center gap-2"] do %>
         <% if recurring_transaction.merchant.present? %>
           <% if recurring_transaction.merchant.logo_url.present? %>
-            <%= image_tag recurring_transaction.merchant.logo_url,
-                class: "w-6 h-6 rounded-full",
-                loading: "lazy" %>
+            <div class="w-6 h-6 rounded-[22%] overflow-hidden flex items-center justify-center">
+              <%= image_tag recurring_transaction.merchant.logo_url,
+                  class: "w-full h-full object-contain",
+                  loading: "lazy" %>
+            </div>
           <% else %>
             <%= render DS::FilledIcon.new(
               variant: :text,

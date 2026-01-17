@@ -4,8 +4,8 @@
   <td class="py-3 px-4 text-sm text-primary">
     <div class="flex w-full items-center gap-2.5">
       <% if provider_merchant.logo_url %>
-        <div class="w-8 h-8 rounded-full flex justify-center items-center">
-          <%= image_tag provider_merchant.logo_url, class: "w-8 h-8 rounded-full" %>
+        <div class="w-8 h-8 rounded-[22%] overflow-hidden flex justify-center items-center">
+          <%= image_tag provider_merchant.logo_url, class: "w-full h-full object-contain" %>
         </div>
       <% else %>
         <div class="w-8 h-8 rounded-full flex items-center justify-center bg-container-inset text-secondary text-sm font-medium">

@@ -7,9 +7,13 @@
       </div>
 
       <% if @holding.security.brandfetch_icon_url.present? %>
-        <%= image_tag @holding.security.brandfetch_icon_url, loading: "lazy", class: "w-9 h-9 rounded-full" %>
+        <div class="w-9 h-9 rounded-[22%] overflow-hidden flex items-center justify-center">
+          <%= image_tag @holding.security.brandfetch_icon_url, loading: "lazy", class: "w-full h-full object-contain" %>
+        </div>
       <% elsif @holding.security.logo_url.present? %>
-        <%= image_tag @holding.security.logo_url, loading: "lazy", class: "w-9 h-9 rounded-full" %>
+        <div class="w-9 h-9 rounded-[22%] overflow-hidden flex items-center justify-center">
+          <%= image_tag @holding.security.logo_url, loading: "lazy", class: "w-full h-full object-contain" %>
+        </div>
       <% else %>
         <%= render DS::FilledIcon.new(variant: :text, text: @holding.name, size: "md", rounded: true) %>
       <% end %>

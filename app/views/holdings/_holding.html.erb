@@ -4,9 +4,13 @@
   <div class="grid grid-cols-12 items-center text-primary text-sm font-medium p-4">
     <div class="col-span-4 flex items-center gap-4">
       <% if holding.security.brandfetch_icon_url.present? %>
-        <%= image_tag holding.security.brandfetch_icon_url, class: "w-9 h-9 rounded-full", loading: "lazy" %>
+        <div class="w-9 h-9 rounded-[22%] overflow-hidden flex items-center justify-center">
+          <%= image_tag holding.security.brandfetch_icon_url, class: "w-full h-full object-contain", loading: "lazy" %>
+        </div>
       <% elsif holding.security.logo_url.present? %>
-        <%= image_tag holding.security.logo_url, class: "w-9 h-9 rounded-full", loading: "lazy" %>
+        <div class="w-9 h-9 rounded-[22%] overflow-hidden flex items-center justify-center">
+          <%= image_tag holding.security.logo_url, class: "w-full h-full object-contain", loading: "lazy" %>
+        </div>
       <% else %>
         <%= render DS::FilledIcon.new(variant: :text, text: holding.name, size: "md", rounded: true) %>
       <% end %>

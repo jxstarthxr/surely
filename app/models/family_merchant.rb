@@ -15,13 +15,19 @@ class FamilyMerchant < Merchant
     end
 
     def should_generate_logo?
-      website_url_changed? || (website_url.present? && logo_url.blank?)
+      website_url_changed? || (website_url.present? && logo_url.blank? && !logo.attached?)
     end
 
     def generate_logo_url_from_website
-      if website_url.present? && Setting.brand_fetch_client_id.present?
-        domain = extract_domain(website_url)
-        self.logo_url = "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
+      if website_url.present?
+        # Try Brandfetch if client ID is configured
+        if Setting.brand_fetch_client_id.present?
+          domain = extract_domain(website_url)
+          self.logo_url = "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/40/h/40?c=#{Setting.brand_fetch_client_id}"
+        else
+          # Fallback to Google Favicon Service (free, no API key needed)
+          self.logo_url = FaviconFetcher.fetch_url(website_url, size: 128)
+        end
       elsif website_url.blank?
         self.logo_url = nil
       end
