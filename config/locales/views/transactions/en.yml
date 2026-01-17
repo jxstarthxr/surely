@@ -12,6 +12,8 @@ en:
       installments_label: Installments
       no_installments_label: No installments
       installments_option: "%{count} months"
+      installment_mode_divide: Divide total amount
+      installment_mode_replicate: Replicate full amount
       description: Description
       description_placeholder: Describe transaction
       expense: Expense

@@ -17,9 +17,9 @@ class PagesController < ApplicationController
     @cashflow_sankey_data = build_cashflow_sankey_data(income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(expense_totals)
 
-    @dashboard_sections = build_dashboard_sections
-
     @upcoming_expenses_series = build_upcoming_monthly_expenses_series
+
+    @dashboard_sections = build_dashboard_sections
 
     @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
   end
@@ -31,15 +31,14 @@ class PagesController < ApplicationController
       month_start = (start_month + i.months)
       month_end = month_start.end_of_month
 
-      amount = Entry
-        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-        .joins(:account)
-        .where(accounts: { family_id: Current.family.id })
+      # Sum all positive transaction amounts (expenses) for this month
+      # Note: positive amounts = expenses, negative amounts = income (see Entry#classification)
+      amount = Current.family.entries
+        .where(entryable_type: "Transaction")
         .where(date: month_start..month_end)
         .where(excluded: false)
-        .where("entries.amount > 0")
-        .where.not("transactions.kind IN (?)", %w[funds_movement cc_payment loan_payment investment_contribution])
-        .sum("entries.amount")
+        .where("amount > 0")
+        .sum(:amount)
         .to_f
 
       { date: month_start, value: amount }
@@ -93,6 +92,30 @@ class PagesController < ApplicationController
     def build_dashboard_sections
       all_sections = [
         {
+          key: "upcoming_monthly_expenses",
+          title: "pages.dashboard.upcoming_monthly_expenses.title",
+          partial: "pages/dashboard/upcoming_monthly_expenses",
+          locals: { upcoming_expenses_series: @upcoming_expenses_series },
+          visible: Current.family.accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "net_worth_chart",
+          title: "pages.dashboard.net_worth_chart.title",
+          partial: "pages/dashboard/net_worth_chart",
+          locals: { balance_sheet: @balance_sheet, period: @period },
+          visible: Current.family.accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "balance_sheet",
+          title: "pages.dashboard.balance_sheet.title",
+          partial: "pages/dashboard/balance_sheet",
+          locals: { balance_sheet: @balance_sheet },
+          visible: Current.family.accounts.any?,
+          collapsible: true
+        },
+        {
           key: "cashflow_sankey",
           title: "pages.dashboard.cashflow_sankey.title",
           partial: "pages/dashboard/cashflow_sankey",
@@ -114,22 +137,6 @@ class PagesController < ApplicationController
           partial: "pages/dashboard/investment_summary",
           locals: { investment_statement: @investment_statement, period: @period },
           visible: Current.family.accounts.any? && @investment_statement.investment_accounts.any?,
-          collapsible: true
-        },
-        {
-          key: "net_worth_chart",
-          title: "pages.dashboard.net_worth_chart.title",
-          partial: "pages/dashboard/net_worth_chart",
-          locals: { balance_sheet: @balance_sheet, period: @period },
-          visible: Current.family.accounts.any?,
-          collapsible: true
-        },
-        {
-          key: "balance_sheet",
-          title: "pages.dashboard.balance_sheet.title",
-          partial: "pages/dashboard/balance_sheet",
-          locals: { balance_sheet: @balance_sheet },
-          visible: Current.family.accounts.any?,
           collapsible: true
         }
       ]

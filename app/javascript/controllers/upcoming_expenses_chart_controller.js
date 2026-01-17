@@ -26,13 +26,15 @@ export default class extends Controller {
   }
 
   _render() {
-    const data = this.dataValue || JSON.parse(this.element.dataset.upcomingExpensesChartDataValue || '[]');
+    const dataObj = this.dataValue || {};
+    const data = dataObj.values || [];
+
     if (!data || !data.length) return;
 
     // Clear
     this.element.innerHTML = "";
 
-    const margin = { top: 8, right: 8, bottom: 18, left: 8 };
+    const margin = { top: 8, right: 8, bottom: 32, left: 8 };
 
     // Using parent element height or fallback
     const parentHeight = this.element.clientHeight || 208;
@@ -51,10 +53,10 @@ export default class extends Controller {
     const values = data.map(d => Math.max(0, +d.value || 0));
     const maxValue = d3.max(values) || 1;
 
-    const x = d3.scaleBand().domain(d3.range(data.length)).range([0, width]).padding(0.14);
+    const x = d3.scaleBand().domain(d3.range(data.length)).range([0, width]).padding(0.22);
     const y = d3.scaleLinear().domain([0, maxValue]).nice().range([height, 0]);
 
-    // Bars
+    // Bars with red gradient fade
     const bars = svg.selectAll('.bar')
       .data(data)
       .enter()
@@ -66,7 +68,7 @@ export default class extends Controller {
         const v = Math.max(0, +d.value || 0);
         const yVal = y(v);
         // Ensure small visible bar height for tiny but non-zero values
-        if (v > 0 && (height - yVal) < 2) return y(1); // draw minimal bar
+        if (v > 0 && (height - yVal) < 2) return height - 2;
         return yVal;
       })
       .attr('height', d => {
@@ -76,8 +78,35 @@ export default class extends Controller {
         return barHeight;
       })
       .attr('rx', 6)
-      .attr('fill', (d, i) => i === 0 ? 'var(--color-red-500)' : 'var(--color-gray-200)')
-      .attr('opacity', (d, i) => i === 0 ? 1 : Math.max(0.25, 1 - (i / (data.length * 1.05))));
+      .attr('fill', (d, i) => {
+        // Gradient from bright red → darker muted orange → darker muted yellow
+        const progress = i / (data.length - 1); // 0 to 1
+
+        if (progress < 0.33) {
+          // Bright Red to Darker Orange (0-33%)
+          const t = progress / 0.33;
+          const r = Math.round(239 - (50 * t)); // 239 → 189
+          const g = Math.round(68 + (52 * t)); // 68 → 120
+          const b = Math.round(68 - (48 * t)); // 68 → 20
+          return `rgb(${r}, ${g}, ${b})`;
+        } else if (progress < 0.66) {
+          // Darker Orange to Darker Yellow (33-66%)
+          const t = (progress - 0.33) / 0.33;
+          const r = Math.round(189 - (24 * t)); // 189 → 165
+          const g = Math.round(120 + (20 * t)); // 120 → 140
+          const b = Math.round(20 - (5 * t)); // 20 → 15
+          return `rgb(${r}, ${g}, ${b})`;
+        } else {
+          // Darker Yellow to Dark Muted Yellow (66-100%)
+          const t = (progress - 0.66) / 0.34;
+          const r = Math.round(165 - (40 * t)); // 165 → 125
+          const g = Math.round(140 - (30 * t)); // 140 → 110
+          const b = Math.round(15 - (5 * t)); // 15 → 10
+          return `rgb(${r}, ${g}, ${b})`;
+        }
+      })
+      .attr('stroke', (d, i) => i === 0 ? 'white' : 'none')
+      .attr('stroke-width', (d, i) => i === 0 ? 2 : 0);
 
     // Add simple tooltips (accessible)
     bars.append('title').text(d => this._formatCurrency(d.value));
@@ -91,17 +120,35 @@ export default class extends Controller {
       .attr('x', (d, i) => x(i) + x.bandwidth() / 2)
       .attr('y', d => {
         const v = Math.max(0, +d.value || 0);
-        const yVal = y(v) - 8;
-        // keep labels readable and inside chart
-        return Math.max(12, yVal);
+        const yVal = y(v);
+        // Position text with bigger gap above bars
+        const textY = yVal - 18; // 18px above bar
+        return Math.max(6, textY); // Never go above 6px from chart top
       })
       .attr('text-anchor', 'middle')
-      .attr('font-size', '12px')
+      .attr('font-size', '11px')
       .attr('font-weight', 600)
-      .attr('fill', (d, i) => i === 0 ? 'var(--color-white)' : 'var(--color-primary)')
+      .style('fill', 'currentColor')
+      .attr('class', 'text-primary')
       .text(d => d.value ? this._abbreviateNumber(d.value, this.currencyValue) : '—');
 
-    // X-axis legend below as labels were added server-side, we keep layout minimal here
+    // Month labels
+    svg.selectAll('.month-label')
+      .data(data)
+      .enter()
+      .append('text')
+      .attr('class', 'month-label text-secondary fill-current')
+      .attr('x', (d, i) => x(i) + x.bandwidth() / 2)
+      .attr('y', height + 20)
+      .attr('text-anchor', 'middle')
+      .attr('font-size', '11px')
+      .text(d => {
+        // Parse date string (YYYY-MM-DD format)
+        const dateParts = d.date.split('-');
+        const year = dateParts[0].slice(-2); // Get last 2 digits of year
+        const month = parseInt(dateParts[1], 10); // Remove leading zero
+        return `${month}/${year}`;
+      });
   }
 
   _abbreviateNumber(value, currency) {

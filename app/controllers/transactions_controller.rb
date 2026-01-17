@@ -64,6 +64,31 @@ class TransactionsController < ApplicationController
   def create
     account = Current.family.accounts.find(params.dig(:entry, :account_id))
     requested_installments = params.dig(:entry, :installments_count).to_i
+    installment_mode = params.dig(:entry, :installment_mode) || "divide"
+    nature = params.dig(:entry, :nature)
+
+    # Validate nature parameter
+    unless [ "inflow", "outflow" ].include?(nature)
+      @entry = account.entries.new(entry_params.except(:installments_count, :installment_mode))
+      @entry.errors.add(:base, "Invalid transaction type")
+      render :new, status: :unprocessable_entity and return
+    end
+
+    # Validate category matches transaction type (if category provided)
+    category_id = params.dig(:entry, :entryable_attributes, :category_id)
+    if category_id.present?
+      category = Current.family.categories.find_by(id: category_id)
+      if category
+        expected_classification = nature == "inflow" ? "income" : "expense"
+        if category.classification != expected_classification
+          @entry = account.entries.new(entry_params.except(:installments_count, :installment_mode))
+          @entry.errors.add(:base, "Category type does not match transaction type")
+          @income_categories = Current.family.categories.incomes.alphabetically
+          @expense_categories = Current.family.categories.expenses.alphabetically
+          render :new, status: :unprocessable_entity and return
+        end
+      end
+    end
 
     # Validate range 1..12
     if requested_installments < 1
@@ -71,7 +96,7 @@ class TransactionsController < ApplicationController
     end
 
     if requested_installments > 12
-      @entry = account.entries.new(entry_params.except(:installments_count))
+      @entry = account.entries.new(entry_params.except(:installments_count, :installment_mode))
       @entry.errors.add(:installments_count, I18n.t("transactions.installments_range_error", min: 1, max: 12))
       render :new, status: :unprocessable_entity and return
     end
@@ -79,13 +104,8 @@ class TransactionsController < ApplicationController
     installments = requested_installments
 
     if installments > 1
-      base_params = entry_params.except(:installments_count)
-
-      # Use cents math to distribute rounding correctly
+      base_params = entry_params.except(:installments_count, :installment_mode)
       amount = base_params[:amount].to_d
-      sign = amount >= 0 ? 1 : -1
-      cents = (amount.abs * 100).to_i
-      quotient, remainder = cents.divmod(installments)
 
       created_entries = []
 
@@ -94,8 +114,18 @@ class TransactionsController < ApplicationController
 
         ActiveRecord::Base.transaction do
           installments.times do |i|
-            inst_cents = quotient + (i < remainder ? 1 : 0)
-            inst_amount = (inst_cents.to_d / 100) * sign
+            # Calculate installment amount based on mode
+            if installment_mode == "replicate"
+              # Replicate: use full amount for each installment
+              inst_amount = amount
+            else
+              # Divide: distribute amount evenly using cents math
+              sign = amount >= 0 ? 1 : -1
+              cents = (amount.abs * 100).to_i
+              quotient, remainder = cents.divmod(installments)
+              inst_cents = quotient + (i < remainder ? 1 : 0)
+              inst_amount = (inst_cents.to_d / 100) * sign
+            end
 
             inst_params = base_params.deep_dup
             base_date = inst_params[:date].is_a?(String) ? Date.parse(inst_params[:date]) : inst_params[:date]
@@ -113,6 +143,7 @@ class TransactionsController < ApplicationController
               tx_extra["installment_group"] = group_id
               tx_extra["installment_index"] = i + 1
               tx_extra["installments_total"] = installments
+              tx_extra["installment_mode"] = installment_mode
               transaction_record.update!(extra: tx_extra)
             end
 
@@ -127,7 +158,7 @@ class TransactionsController < ApplicationController
           format.turbo_stream { stream_redirect_back_or_to(account_path(created_entries.first.account)) }
         end
       rescue ActiveRecord::RecordInvalid => e
-        @entry = account.entries.new(entry_params.except(:installments_count))
+        @entry = account.entries.new(entry_params.except(:installments_count, :installment_mode))
         @entry.errors.add(:base, e.record.errors.full_messages.join(", "))
         render :new, status: :unprocessable_entity
       end
@@ -135,7 +166,7 @@ class TransactionsController < ApplicationController
       return
     end
 
-    @entry = account.entries.new(entry_params.except(:installments_count))
+    @entry = account.entries.new(entry_params.except(:installments_count, :installment_mode))
 
     if @entry.save
       @entry.sync_account_later
@@ -289,7 +320,7 @@ class TransactionsController < ApplicationController
 
     def entry_params
       entry_params = params.require(:entry).permit(
-        :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type, :installments_count,
+        :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type, :installments_count, :installment_mode,
         entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, { tag_ids: [] } ]
       )
 

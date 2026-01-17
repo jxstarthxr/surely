@@ -1,8 +1,6 @@
 <% content_for :page_header do %>
   <div class="space-y-1 mb-6 flex gap-4 justify-between items-center lg:items-start">
     <div class="space-y-1">
-        <%= render partial: "pages/dashboard/upcoming_monthly_expenses" if @upcoming_expenses_series.present? %>
-
         <h1 class="text-xl lg:text-3xl font-medium text-primary">
           <%= t("pages.dashboard.welcome", name: Current.user.first_name) %>
         </h1>

@@ -8,7 +8,7 @@
   <section>
     <%= render "shared/transaction_type_tabs", active_tab: params[:nature] == "inflow" ? "income" : "expense", account_id: params[:account_id] %>
 
-    <%= f.hidden_field :nature, value: params[:nature] || "outflow" %>
+    <%= f.hidden_field :nature, value: params[:nature] || "outflow", data: { "transaction-nature-target": "field" } %>
     <%= f.hidden_field :entryable_type, value: "Transaction" %>
   </section>
 
@@ -28,12 +28,35 @@
     <% end %>
     <%= f.date_field :date, label: t(".date"), required: true, min: Entry.min_supported_date, value: Date.current %>
 
-    <%= f.number_field :installments_count,
-                         label: t(".installments_label"),
-                         min: 1,
-                         max: 1000,
-                         value: 1,
-                         class: "form-field__input max-w-40 mt-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" %>
+    <div class="space-y-2 mt-2">
+      <%= f.number_field :installments_count,
+                           label: t(".installments_label"),
+                           min: 1,
+                           max: 1000,
+                           value: 1,
+                           class: "form-field__input max-w-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" %>
+
+      <div class="flex items-center justify-center gap-3 text-sm">
+        <label class="relative flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-surface border border-primary cursor-pointer hover:bg-surface-hover transition-all has-[:checked]:ring-2 has-[:checked]:ring-primary has-[:checked]:bg-surface-hover has-[:checked]:border-primary">
+          <%= f.radio_button :installment_mode, "divide", checked: true, class: "peer sr-only" %>
+          <svg class="w-0 h-4 text-primary peer-checked:w-4 transition-all" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+          </svg>
+          <span class="text-primary font-medium">
+            <%= t(".installment_mode_divide") %>
+          </span>
+        </label>
+        <label class="relative flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-surface border border-primary cursor-pointer hover:bg-surface-hover transition-all has-[:checked]:ring-2 has-[:checked]:ring-primary has-[:checked]:bg-surface-hover has-[:checked]:border-primary">
+          <%= f.radio_button :installment_mode, "replicate", class: "peer sr-only" %>
+          <svg class="w-0 h-4 text-primary peer-checked:w-4 transition-all" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+          </svg>
+          <span class="text-primary font-medium">
+            <%= t(".installment_mode_replicate") %>
+          </span>
+        </label>
+      </div>
+    </div>
   </section>
 
   <%= render DS::Disclosure.new(title: t(".details")) do %>

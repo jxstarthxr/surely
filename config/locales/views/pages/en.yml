@@ -9,6 +9,11 @@ en:
       upcoming_expenses_title: "This month & next 11 months"
       upcoming_expenses_subtitle: "Projected total expenses per month"
       future_expenses_title: "Future expenses"
+      upcoming_monthly_expenses:
+        title: "Upcoming Monthly Expenses"
+        no_data_title: "No upcoming expenses"
+        no_data_description: "Add future expense transactions to see projected monthly expenses"
+        add_transaction: "Add transaction"
       new: "New"
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
